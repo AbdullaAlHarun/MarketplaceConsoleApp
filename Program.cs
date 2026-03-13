@@ -1,9 +1,23 @@
-﻿namespace MarketplaceConsoleApp;
+﻿using MarketplaceConsoleApp.Services;
+using MarketplaceConsoleApp.UI;
 
-class Program
+namespace MarketplaceConsoleApp;
+
+internal class Program
 {
     static void Main(string[] args)
     {
-        Console.WriteLine("Marketplace Console App starting...");
+        var userService = new UserService();
+        var listingService = new ListingService();
+        var transactionService = new TransactionService();
+        var reviewService = new ReviewService();
+
+        var menu = new ConsoleMenu(
+            userService,
+            listingService,
+            transactionService,
+            reviewService);
+
+        menu.Run();
     }
 }
