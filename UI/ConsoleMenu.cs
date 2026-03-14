@@ -54,19 +54,19 @@ public class ConsoleMenu
         Console.WriteLine("3. Exit");
         Console.WriteLine();
 
-        int choice = ReadChoice("Select an option: ", 1, 3);
+        int choice = MenuInputHelper.ReadChoice("Select an option: ", 1, 3);
         Console.Clear();
 
         switch (choice)
         {
             case 1:
                 RegisterUser();
-                Pause();
+                MenuInputHelper.Pause();
                 return true;
 
             case 2:
                 LoginUser();
-                Pause();
+                MenuInputHelper.Pause();
                 return true;
 
             case 3:
@@ -83,17 +83,18 @@ public class ConsoleMenu
         Console.WriteLine($"=== Main Menu ({_currentUser!.Username}) ===");
         Console.WriteLine("1. Create Listing");
         Console.WriteLine("2. Browse Available Listings");
-        Console.WriteLine("3. Search Listings");
-        Console.WriteLine("4. My Profile");
-        Console.WriteLine("5. My Listings");
-        Console.WriteLine("6. My Purchases");
-        Console.WriteLine("7. My Sales");
-        Console.WriteLine("8. Leave Review");
-        Console.WriteLine("9. View All Reviews");
-        Console.WriteLine("10. Log Out");
+        Console.WriteLine("3. Filter Listings by Category");
+        Console.WriteLine("4. Search Listings");
+        Console.WriteLine("5. My Profile");
+        Console.WriteLine("6. My Listings");
+        Console.WriteLine("7. My Purchases");
+        Console.WriteLine("8. My Sales");
+        Console.WriteLine("9. Leave Review");
+        Console.WriteLine("10. View All Reviews");
+        Console.WriteLine("11. Log Out");
         Console.WriteLine();
 
-        int choice = ReadChoice("Select an option: ", 1, 10);
+        int choice = MenuInputHelper.ReadChoice("Select an option: ", 1, 11);
         Console.Clear();
 
         switch (choice)
@@ -105,40 +106,43 @@ public class ConsoleMenu
                 BrowseAvailableListings();
                 break;
             case 3:
-                SearchListings();
+                FilterListingsByCategory();
                 break;
             case 4:
-                ShowMyProfile();
+                SearchListings();
                 break;
             case 5:
-                ShowMyListings();
+                ShowMyProfile();
                 break;
             case 6:
-                ShowMyPurchases();
+                ShowMyListings();
                 break;
             case 7:
-                ShowMySales();
+                ShowMyPurchases();
                 break;
             case 8:
-                LeaveReviewAsCurrentUser();
+                ShowMySales();
                 break;
             case 9:
-                ShowReviews();
+                LeaveReviewAsCurrentUser();
                 break;
             case 10:
+                ShowReviews();
+                break;
+            case 11:
                 LogoutUser();
                 return;
         }
 
-        Pause();
+        MenuInputHelper.Pause();
     }
 
     private void RegisterUser()
     {
         Console.WriteLine("=== Register User ===");
 
-        string username = ReadRequiredText("Enter username: ");
-        string password = ReadRequiredText("Enter password: ");
+        string username = MenuInputHelper.ReadRequiredText("Enter username: ");
+        string password = MenuInputHelper.ReadRequiredText("Enter password: ");
 
         var existingUser = _userService.GetAllUsers()
             .FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
@@ -157,8 +161,8 @@ public class ConsoleMenu
     {
         Console.WriteLine("=== Log In ===");
 
-        string username = ReadRequiredText("Enter username: ");
-        string password = ReadRequiredText("Enter password: ");
+        string username = MenuInputHelper.ReadRequiredText("Enter username: ");
+        string password = MenuInputHelper.ReadRequiredText("Enter password: ");
 
         var user = _userService.LoginUser(username, password);
 
@@ -182,11 +186,11 @@ public class ConsoleMenu
     {
         Console.WriteLine("=== Create Listing ===");
 
-        string title = ReadRequiredText("Enter title: ");
-        string description = ReadRequiredText("Enter description: ");
-        Category category = SelectEnumValue<Category>("Select category:");
-        ItemCondition condition = SelectEnumValue<ItemCondition>("Select condition:");
-        decimal price = ReadDecimal("Enter price: ", 0);
+        string title = MenuInputHelper.ReadRequiredText("Enter title: ");
+        string description = MenuInputHelper.ReadRequiredText("Enter description: ");
+        Category category = MenuInputHelper.SelectEnumValue<Category>("Select category:");
+        ItemCondition condition = MenuInputHelper.SelectEnumValue<ItemCondition>("Select condition:");
+        decimal price = MenuInputHelper.ReadDecimal("Enter price: ", 0);
 
         var listing = _listingService.CreateListing(
             title,
@@ -202,6 +206,7 @@ public class ConsoleMenu
 
     private void BrowseAvailableListings()
     {
+        // Hide the current user's own listings from the buy flow.
         var availableListings = _listingService.GetAvailableListings()
             .Where(l => l.Seller != _currentUser)
             .ToList();
@@ -212,25 +217,46 @@ public class ConsoleMenu
             return;
         }
 
-        var selectedListing = SelectFromList(
+        var selectedListing = MenuInputHelper.SelectFromList(
             availableListings,
             "=== Available Listings ===",
             l => $"{l.Title} | {l.Category} | {l.Condition} | {l.Price} NOK | Seller: {l.Seller.Username}");
 
         Console.Clear();
-        ShowListingDetails(selectedListing);
+        ListingViewHelper.ShowListingDetails(selectedListing);
 
         Console.WriteLine();
         Console.WriteLine("1. Buy this item");
         Console.WriteLine("2. Go back");
         Console.WriteLine();
 
-        int choice = ReadChoice("Select an option: ", 1, 2);
+        int choice = MenuInputHelper.ReadChoice("Select an option: ", 1, 2);
 
         if (choice == 1)
         {
             PurchaseListingAsCurrentUser(selectedListing);
         }
+    }
+
+    private void FilterListingsByCategory()
+    {
+        Console.WriteLine("=== Filter Listings by Category ===");
+
+        Category selectedCategory = MenuInputHelper.SelectEnumValue<Category>("Select category:");
+
+        var filteredListings = _listingService.GetAvailableListings()
+            .Where(l => l.Seller != _currentUser)
+            .Where(l => l.Category == selectedCategory)
+            .ToList();
+
+        if (!filteredListings.Any())
+        {
+            Console.WriteLine("No listings found in that category.");
+            return;
+        }
+
+        Console.WriteLine($"=== {selectedCategory} Listings ===");
+        ListingViewHelper.PrintListings(filteredListings);
     }
 
     private void PurchaseListingAsCurrentUser(Listing listing)
@@ -256,7 +282,7 @@ public class ConsoleMenu
     private void SearchListings()
     {
         Console.WriteLine("=== Search Listings ===");
-        string keyword = ReadRequiredText("Enter keyword: ");
+        string keyword = MenuInputHelper.ReadRequiredText("Enter keyword: ");
 
         var results = _listingService.GetAvailableListings()
             .Where(l => l.Seller != _currentUser)
@@ -272,7 +298,7 @@ public class ConsoleMenu
         }
 
         Console.WriteLine("=== Search Results ===");
-        PrintListings(results);
+        ListingViewHelper.PrintListings(results);
     }
 
     private void ShowMyProfile()
@@ -315,7 +341,7 @@ public class ConsoleMenu
         }
 
         Console.WriteLine("=== My Listings ===");
-        PrintListings(_currentUser.Listings);
+        ListingViewHelper.PrintListings(_currentUser.Listings);
     }
 
     private void ShowMyPurchases()
@@ -362,18 +388,18 @@ public class ConsoleMenu
             return;
         }
 
-        var transaction = SelectFromList(
+        var transaction = MenuInputHelper.SelectFromList(
             myPurchases,
             "Select a purchase to review:",
             t => $"{t.Listing.Title} | Seller: {t.Seller.Username} | {t.Price} NOK");
 
-        int rating = ReadChoice("Enter rating (1-6): ", 1, 6);
+        int rating = MenuInputHelper.ReadChoice("Enter rating (1-6): ", 1, 6);
         Console.Write("Enter comment (optional): ");
         string comment = Console.ReadLine() ?? string.Empty;
 
         try
         {
-            // Only the buyer can leave a review for this transaction.
+            // The buyer is the only user allowed to review a transaction.
             var review = _reviewService.AddReview(rating, comment, _currentUser, transaction);
             Console.WriteLine("Review added successfully.");
             Console.WriteLine($"Seller: {review.ReviewedUser.Username} | Rating: {review.Rating}");
@@ -408,114 +434,10 @@ public class ConsoleMenu
         }
     }
 
-    private void ShowListingDetails(Listing listing)
-    {
-        Console.WriteLine($"=== {listing.Title} ===");
-        Console.WriteLine($"Seller: {listing.Seller.Username}");
-        Console.WriteLine($"Category: {listing.Category}");
-        Console.WriteLine($"Condition: {listing.Condition}");
-        Console.WriteLine($"Price: {listing.Price} NOK");
-        Console.WriteLine($"Status: {listing.Status}");
-        Console.WriteLine($"Description: {listing.Description}");
-    }
-
-    private void PrintListings(List<Listing> listings)
-    {
-        for (int i = 0; i < listings.Count; i++)
-        {
-            var listing = listings[i];
-            Console.WriteLine(
-                $"{i + 1}. {listing.Title} | {listing.Category} | {listing.Condition} | {listing.Price} NOK | Status: {listing.Status} | Seller: {listing.Seller.Username}");
-        }
-    }
-
-    private T SelectFromList<T>(List<T> items, string heading, Func<T, string> displayText)
-    {
-        Console.WriteLine(heading);
-
-        for (int i = 0; i < items.Count; i++)
-        {
-            Console.WriteLine($"{i + 1}. {displayText(items[i])}");
-        }
-
-        Console.WriteLine();
-        int choice = ReadChoice("Choose an option: ", 1, items.Count);
-        return items[choice - 1];
-    }
-
-    private TEnum SelectEnumValue<TEnum>(string heading) where TEnum : struct, Enum
-    {
-        var values = Enum.GetValues<TEnum>().ToList();
-
-        Console.WriteLine(heading);
-        for (int i = 0; i < values.Count; i++)
-        {
-            Console.WriteLine($"{i + 1}. {values[i]}");
-        }
-
-        Console.WriteLine();
-        int choice = ReadChoice("Choose an option: ", 1, values.Count);
-        return values[choice - 1];
-    }
-
-    private int ReadChoice(string prompt, int min, int max)
-    {
-        while (true)
-        {
-            Console.Write(prompt);
-
-            if (int.TryParse(Console.ReadLine(), out int choice) &&
-                choice >= min && choice <= max)
-            {
-                return choice;
-            }
-
-            Console.WriteLine($"Invalid input. Enter a number between {min} and {max}.");
-        }
-    }
-
-    private decimal ReadDecimal(string prompt, decimal minValue)
-    {
-        while (true)
-        {
-            Console.Write(prompt);
-
-            if (decimal.TryParse(Console.ReadLine(), out decimal value) && value >= minValue)
-            {
-                return value;
-            }
-
-            Console.WriteLine($"Invalid input. Enter a number greater than or equal to {minValue}.");
-        }
-    }
-
-    private string ReadRequiredText(string prompt)
-    {
-        while (true)
-        {
-            Console.Write(prompt);
-            string? input = Console.ReadLine();
-
-            if (!string.IsNullOrWhiteSpace(input))
-            {
-                return input.Trim();
-            }
-
-            Console.WriteLine("Input cannot be empty.");
-        }
-    }
-
-    private void Pause()
-    {
-        Console.WriteLine();
-        Console.WriteLine("Press any key to continue...");
-        Console.ReadKey();
-    }
-
     private void SeedData()
     {
         var abdulla = _userService.RegisterUser("Abdulla", "1234");
-        var mehedi = _userService.RegisterUser("Mehedi", "1234");
+        _userService.RegisterUser("Mehedi", "1234");
 
         _listingService.CreateListing(
             "iPhone 12",
