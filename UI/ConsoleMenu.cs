@@ -86,7 +86,7 @@ public class ConsoleMenu
         Console.WriteLine("3. Filter Listings by Category");
         Console.WriteLine("4. Search Listings");
         Console.WriteLine("5. My Profile");
-        Console.WriteLine("6. My Listings");
+        Console.WriteLine("6. Manage My Listings");
         Console.WriteLine("7. My Purchases");
         Console.WriteLine("8. My Sales");
         Console.WriteLine("9. Leave Review");
@@ -115,7 +115,7 @@ public class ConsoleMenu
                 ShowMyProfile();
                 break;
             case 6:
-                ShowMyListings();
+                ManageMyListings();
                 break;
             case 7:
                 ShowMyPurchases();
@@ -259,26 +259,6 @@ public class ConsoleMenu
         ListingViewHelper.PrintListings(filteredListings);
     }
 
-    private void PurchaseListingAsCurrentUser(Listing listing)
-    {
-        try
-        {
-            var transaction = _transactionService.PurchaseListing(listing, _currentUser!);
-
-            Console.WriteLine();
-            Console.WriteLine("Purchase completed successfully.");
-            Console.WriteLine($"Item: {transaction.Listing.Title}");
-            Console.WriteLine($"Buyer: {transaction.Buyer.Username}");
-            Console.WriteLine($"Seller: {transaction.Seller.Username}");
-            Console.WriteLine($"Price: {transaction.Price} NOK");
-            Console.WriteLine($"Date: {transaction.TransactionDate:g}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Purchase failed: {ex.Message}");
-        }
-    }
-
     private void SearchListings()
     {
         Console.WriteLine("=== Search Listings ===");
@@ -299,6 +279,114 @@ public class ConsoleMenu
 
         Console.WriteLine("=== Search Results ===");
         ListingViewHelper.PrintListings(results);
+    }
+
+    private void ManageMyListings()
+    {
+        if (!_currentUser!.Listings.Any())
+        {
+            Console.WriteLine("You have not created any listings.");
+            return;
+        }
+
+        var selectedListing = MenuInputHelper.SelectFromList(
+            _currentUser.Listings,
+            "=== My Listings ===",
+            l => $"{l.Title} | {l.Category} | {l.Condition} | {l.Price} NOK | Status: {l.Status}");
+
+        Console.Clear();
+        ListingViewHelper.ShowListingDetails(selectedListing);
+
+        Console.WriteLine();
+        Console.WriteLine("1. Edit Listing");
+        Console.WriteLine("2. Remove Listing");
+        Console.WriteLine("3. Go Back");
+        Console.WriteLine();
+
+        int choice = MenuInputHelper.ReadChoice("Select an option: ", 1, 3);
+
+        switch (choice)
+        {
+            case 1:
+                EditListing(selectedListing);
+                break;
+            case 2:
+                RemoveListing(selectedListing);
+                break;
+            case 3:
+                return;
+        }
+    }
+
+    private void EditListing(Listing listing)
+    {
+        Console.WriteLine("=== Edit Listing ===");
+
+        string title = MenuInputHelper.ReadRequiredText("Enter new title: ");
+        string description = MenuInputHelper.ReadRequiredText("Enter new description: ");
+        Category category = MenuInputHelper.SelectEnumValue<Category>("Select new category:");
+        ItemCondition condition = MenuInputHelper.SelectEnumValue<ItemCondition>("Select new condition:");
+        decimal price = MenuInputHelper.ReadDecimal("Enter new price: ", 0);
+
+        try
+        {
+            _listingService.UpdateListing(
+                listing,
+                _currentUser!,
+                title,
+                description,
+                category,
+                condition,
+                price);
+
+            Console.WriteLine("Listing updated successfully.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Could not update listing: {ex.Message}");
+        }
+    }
+
+    private void RemoveListing(Listing listing)
+    {
+        Console.Write("Are you sure you want to remove this listing? (y/n): ");
+        string? input = Console.ReadLine();
+
+        if (input == null || !input.Equals("y", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine("Remove cancelled.");
+            return;
+        }
+
+        try
+        {
+            _listingService.RemoveListing(listing, _currentUser!);
+            Console.WriteLine("Listing removed successfully.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Could not remove listing: {ex.Message}");
+        }
+    }
+
+    private void PurchaseListingAsCurrentUser(Listing listing)
+    {
+        try
+        {
+            var transaction = _transactionService.PurchaseListing(listing, _currentUser!);
+
+            Console.WriteLine();
+            Console.WriteLine("Purchase completed successfully.");
+            Console.WriteLine($"Item: {transaction.Listing.Title}");
+            Console.WriteLine($"Buyer: {transaction.Buyer.Username}");
+            Console.WriteLine($"Seller: {transaction.Seller.Username}");
+            Console.WriteLine($"Price: {transaction.Price} NOK");
+            Console.WriteLine($"Date: {transaction.TransactionDate:g}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Purchase failed: {ex.Message}");
+        }
     }
 
     private void ShowMyProfile()
@@ -330,18 +418,6 @@ public class ConsoleMenu
                 Console.WriteLine($"   Comment: {review.Comment}");
             }
         }
-    }
-
-    private void ShowMyListings()
-    {
-        if (!_currentUser!.Listings.Any())
-        {
-            Console.WriteLine("You have not created any listings.");
-            return;
-        }
-
-        Console.WriteLine("=== My Listings ===");
-        ListingViewHelper.PrintListings(_currentUser.Listings);
     }
 
     private void ShowMyPurchases()
