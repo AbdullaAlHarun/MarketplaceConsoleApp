@@ -1,9 +1,14 @@
 using MarketplaceConsoleApp.Enums;
 using MarketplaceConsoleApp.Models;
 using MarketplaceConsoleApp.Services;
+using MarketplaceConsoleApp.Helpers;
+using Spectre.Console;
 
 namespace MarketplaceConsoleApp.UI;
 
+/// <summary>
+/// Handles the main console interaction for the marketplace application.
+/// </summary>
 public class ConsoleMenu
 {
     private readonly UserService _userService;
@@ -13,6 +18,9 @@ public class ConsoleMenu
 
     private User? _currentUser;
 
+    /// <summary>
+    /// Creates a new console menu with required services.
+    /// </summary>
     public ConsoleMenu(
         UserService userService,
         ListingService listingService,
@@ -25,6 +33,9 @@ public class ConsoleMenu
         _reviewService = reviewService;
     }
 
+    /// <summary>
+    /// Starts the application loop.
+    /// </summary>
     public void Run()
     {
         SeedData();
@@ -48,29 +59,32 @@ public class ConsoleMenu
 
     private bool ShowStartMenu()
     {
-        Console.WriteLine("=== Second-Hand Market ===");
-        Console.WriteLine("1. Register");
-        Console.WriteLine("2. Log In");
-        Console.WriteLine("3. Exit");
-        Console.WriteLine();
+        AnsiConsole.Write(new Rule("[yellow]Second-Hand Market[/]"));
+        AnsiConsole.MarkupLine("[grey]Buy and sell used items easily[/]");
+        AnsiConsole.WriteLine();
 
-        int choice = MenuInputHelper.ReadChoice("Select an option: ", 1, 3);
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("Choose an option:")
+                .PageSize(10)
+                .AddChoices("Register", "Log In", "Exit"));
+
         Console.Clear();
 
         switch (choice)
         {
-            case 1:
+            case "Register":
                 RegisterUser();
                 MenuInputHelper.Pause();
                 return true;
 
-            case 2:
+            case "Log In":
                 LoginUser();
                 MenuInputHelper.Pause();
                 return true;
 
-            case 3:
-                Console.WriteLine("Exiting application...");
+            case "Exit":
+                AnsiConsole.MarkupLine("[yellow]Exiting application...[/]");
                 return false;
 
             default:
@@ -80,56 +94,61 @@ public class ConsoleMenu
 
     private void ShowUserMenu()
     {
-        Console.WriteLine($"=== Main Menu ({_currentUser!.Username}) ===");
-        Console.WriteLine("1. Create Listing");
-        Console.WriteLine("2. Browse Available Listings");
-        Console.WriteLine("3. Filter Listings by Category");
-        Console.WriteLine("4. Search Listings");
-        Console.WriteLine("5. My Profile");
-        Console.WriteLine("6. Manage My Listings");
-        Console.WriteLine("7. My Purchases");
-        Console.WriteLine("8. My Sales");
-        Console.WriteLine("9. Leave Review");
-        Console.WriteLine("10. View All Reviews");
-        Console.WriteLine("11. Log Out");
-        Console.WriteLine();
+        AnsiConsole.Write(new Rule($"[green]Main Menu ({EscapeMarkup(_currentUser!.Username)})[/]"));
+        AnsiConsole.WriteLine();
 
-        int choice = MenuInputHelper.ReadChoice("Select an option: ", 1, 11);
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("Choose an action:")
+                .PageSize(12)
+                .AddChoices(
+                    "Create Listing",
+                    "Browse Available Listings",
+                    "Filter Listings by Category",
+                    "Search Listings",
+                    "My Profile",
+                    "Manage My Listings",
+                    "My Purchases",
+                    "My Sales",
+                    "Leave Review",
+                    "View All Reviews",
+                    "Log Out"));
+
         Console.Clear();
 
         switch (choice)
         {
-            case 1:
+            case "Create Listing":
                 CreateListingForCurrentUser();
                 break;
-            case 2:
+            case "Browse Available Listings":
                 BrowseAvailableListings();
                 break;
-            case 3:
+            case "Filter Listings by Category":
                 FilterListingsByCategory();
                 break;
-            case 4:
+            case "Search Listings":
                 SearchListings();
                 break;
-            case 5:
+            case "My Profile":
                 ShowMyProfile();
                 break;
-            case 6:
+            case "Manage My Listings":
                 ManageMyListings();
                 break;
-            case 7:
+            case "My Purchases":
                 ShowMyPurchases();
                 break;
-            case 8:
+            case "My Sales":
                 ShowMySales();
                 break;
-            case 9:
+            case "Leave Review":
                 LeaveReviewAsCurrentUser();
                 break;
-            case 10:
+            case "View All Reviews":
                 ShowReviews();
                 break;
-            case 11:
+            case "Log Out":
                 LogoutUser();
                 return;
         }
@@ -139,7 +158,7 @@ public class ConsoleMenu
 
     private void RegisterUser()
     {
-        Console.WriteLine("=== Register User ===");
+        AnsiConsole.Write(new Rule("[yellow]Register User[/]"));
 
         string username = MenuInputHelper.ReadRequiredText("Enter username: ");
         string password = MenuInputHelper.ReadRequiredText("Enter password: ");
@@ -149,17 +168,17 @@ public class ConsoleMenu
 
         if (existingUser != null)
         {
-            Console.WriteLine("Username already exists.");
+            AnsiConsole.MarkupLine("[red]Username already exists.[/]");
             return;
         }
 
         var user = _userService.RegisterUser(username, password);
-        Console.WriteLine($"User '{user.Username}' registered successfully.");
+        AnsiConsole.MarkupLine($"[green]User '{EscapeMarkup(user.Username)}' registered successfully.[/]");
     }
 
     private void LoginUser()
     {
-        Console.WriteLine("=== Log In ===");
+        AnsiConsole.Write(new Rule("[yellow]Log In[/]"));
 
         string username = MenuInputHelper.ReadRequiredText("Enter username: ");
         string password = MenuInputHelper.ReadRequiredText("Enter password: ");
@@ -168,23 +187,23 @@ public class ConsoleMenu
 
         if (user == null)
         {
-            Console.WriteLine("Invalid username or password.");
+            AnsiConsole.MarkupLine("[red]Invalid username or password.[/]");
             return;
         }
 
         _currentUser = user;
-        Console.WriteLine($"Welcome back, {_currentUser.Username}!");
+        AnsiConsole.MarkupLine($"[green]Welcome back, {EscapeMarkup(_currentUser.Username)}![/]");
     }
 
     private void LogoutUser()
     {
-        Console.WriteLine($"{_currentUser!.Username} logged out.");
+        AnsiConsole.MarkupLine($"[yellow]{EscapeMarkup(_currentUser!.Username)} logged out.[/]");
         _currentUser = null;
     }
 
     private void CreateListingForCurrentUser()
     {
-        Console.WriteLine("=== Create Listing ===");
+        AnsiConsole.Write(new Rule("[yellow]Create Listing[/]"));
 
         string title = MenuInputHelper.ReadRequiredText("Enter title: ");
         string description = MenuInputHelper.ReadRequiredText("Enter description: ");
@@ -200,39 +219,44 @@ public class ConsoleMenu
             price,
             _currentUser!);
 
-        Console.WriteLine("Listing created successfully.");
-        Console.WriteLine($"{listing.Title} | {listing.Category} | {listing.Condition} | {listing.Price} NOK");
+        AnsiConsole.MarkupLine("[green]Listing created successfully.[/]");
+        ListingViewHelper.ShowListingDetails(listing);
     }
 
     private void BrowseAvailableListings()
     {
-        // Hide the current user's own listings from the buy flow.
         var availableListings = _listingService.GetAvailableListings()
             .Where(l => l.Seller != _currentUser)
             .ToList();
 
         if (!availableListings.Any())
         {
-            Console.WriteLine("No available listings found.");
+            AnsiConsole.MarkupLine("[yellow]No available listings found.[/]");
             return;
         }
 
-        var selectedListing = MenuInputHelper.SelectFromList(
-            availableListings,
-            "=== Available Listings ===",
-            l => $"{l.Title} | {l.Category} | {l.Condition} | {l.Price} NOK | Seller: {l.Seller.Username}");
+        AnsiConsole.Write(new Rule("[green]Available Listings[/]"));
+        ListingViewHelper.PrintListings(availableListings);
+        AnsiConsole.WriteLine();
+
+        var selectedListing = AnsiConsole.Prompt(
+            new SelectionPrompt<Listing>()
+                .Title("Select a listing:")
+                .PageSize(10)
+                .UseConverter(l =>
+                    $"{l.Title} | {l.Category} | {l.Condition} | {l.Price} NOK | Seller: {l.Seller.Username}")
+                .AddChoices(availableListings));
 
         Console.Clear();
         ListingViewHelper.ShowListingDetails(selectedListing);
+        AnsiConsole.WriteLine();
 
-        Console.WriteLine();
-        Console.WriteLine("1. Buy this item");
-        Console.WriteLine("2. Go back");
-        Console.WriteLine();
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("Choose an option:")
+                .AddChoices("Buy this item", "Go back"));
 
-        int choice = MenuInputHelper.ReadChoice("Select an option: ", 1, 2);
-
-        if (choice == 1)
+        if (choice == "Buy this item")
         {
             PurchaseListingAsCurrentUser(selectedListing);
         }
@@ -240,7 +264,7 @@ public class ConsoleMenu
 
     private void FilterListingsByCategory()
     {
-        Console.WriteLine("=== Filter Listings by Category ===");
+        AnsiConsole.Write(new Rule("[yellow]Filter Listings by Category[/]"));
 
         Category selectedCategory = MenuInputHelper.SelectEnumValue<Category>("Select category:");
 
@@ -251,17 +275,17 @@ public class ConsoleMenu
 
         if (!filteredListings.Any())
         {
-            Console.WriteLine("No listings found in that category.");
+            AnsiConsole.MarkupLine("[yellow]No listings found in that category.[/]");
             return;
         }
 
-        Console.WriteLine($"=== {selectedCategory} Listings ===");
+        AnsiConsole.Write(new Rule($"[green]{EscapeMarkup(selectedCategory.ToString())} Listings[/]"));
         ListingViewHelper.PrintListings(filteredListings);
     }
 
     private void SearchListings()
     {
-        Console.WriteLine("=== Search Listings ===");
+        AnsiConsole.Write(new Rule("[yellow]Search Listings[/]"));
         string keyword = MenuInputHelper.ReadRequiredText("Enter keyword: ");
 
         var results = _listingService.GetAvailableListings()
@@ -273,11 +297,11 @@ public class ConsoleMenu
 
         if (!results.Any())
         {
-            Console.WriteLine("No matching listings found.");
+            AnsiConsole.MarkupLine("[yellow]No matching listings found.[/]");
             return;
         }
 
-        Console.WriteLine("=== Search Results ===");
+        AnsiConsole.Write(new Rule("[green]Search Results[/]"));
         ListingViewHelper.PrintListings(results);
     }
 
@@ -285,42 +309,47 @@ public class ConsoleMenu
     {
         if (!_currentUser!.Listings.Any())
         {
-            Console.WriteLine("You have not created any listings.");
+            AnsiConsole.MarkupLine("[yellow]You have not created any listings.[/]");
             return;
         }
 
-        var selectedListing = MenuInputHelper.SelectFromList(
-            _currentUser.Listings,
-            "=== My Listings ===",
-            l => $"{l.Title} | {l.Category} | {l.Condition} | {l.Price} NOK | Status: {l.Status}");
+        AnsiConsole.Write(new Rule("[green]My Listings[/]"));
+        ListingViewHelper.PrintListings(_currentUser.Listings);
+        AnsiConsole.WriteLine();
+
+        var selectedListing = AnsiConsole.Prompt(
+            new SelectionPrompt<Listing>()
+                .Title("Select one of your listings:")
+                .PageSize(10)
+                .UseConverter(l =>
+                    $"{l.Title} | {l.Category} | {l.Condition} | {l.Price} NOK | Status: {l.Status}")
+                .AddChoices(_currentUser.Listings));
 
         Console.Clear();
         ListingViewHelper.ShowListingDetails(selectedListing);
+        AnsiConsole.WriteLine();
 
-        Console.WriteLine();
-        Console.WriteLine("1. Edit Listing");
-        Console.WriteLine("2. Remove Listing");
-        Console.WriteLine("3. Go Back");
-        Console.WriteLine();
-
-        int choice = MenuInputHelper.ReadChoice("Select an option: ", 1, 3);
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("Choose an option:")
+                .AddChoices("Edit Listing", "Remove Listing", "Go Back"));
 
         switch (choice)
         {
-            case 1:
+            case "Edit Listing":
                 EditListing(selectedListing);
                 break;
-            case 2:
+            case "Remove Listing":
                 RemoveListing(selectedListing);
                 break;
-            case 3:
+            case "Go Back":
                 return;
         }
     }
 
     private void EditListing(Listing listing)
     {
-        Console.WriteLine("=== Edit Listing ===");
+        AnsiConsole.Write(new Rule("[yellow]Edit Listing[/]"));
 
         string title = MenuInputHelper.ReadRequiredText("Enter new title: ");
         string description = MenuInputHelper.ReadRequiredText("Enter new description: ");
@@ -339,33 +368,32 @@ public class ConsoleMenu
                 condition,
                 price);
 
-            Console.WriteLine("Listing updated successfully.");
+            AnsiConsole.MarkupLine("[green]Listing updated successfully.[/]");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Could not update listing: {ex.Message}");
+            AnsiConsole.MarkupLine($"[red]Could not update listing:[/] {EscapeMarkup(ex.Message)}");
         }
     }
 
     private void RemoveListing(Listing listing)
     {
-        Console.Write("Are you sure you want to remove this listing? (y/n): ");
-        string? input = Console.ReadLine();
+        var confirm = AnsiConsole.Confirm("Are you sure you want to remove this listing?");
 
-        if (input == null || !input.Equals("y", StringComparison.OrdinalIgnoreCase))
+        if (!confirm)
         {
-            Console.WriteLine("Remove cancelled.");
+            AnsiConsole.MarkupLine("[yellow]Remove cancelled.[/]");
             return;
         }
 
         try
         {
             _listingService.RemoveListing(listing, _currentUser!);
-            Console.WriteLine("Listing removed successfully.");
+            AnsiConsole.MarkupLine("[green]Listing removed successfully.[/]");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Could not remove listing: {ex.Message}");
+            AnsiConsole.MarkupLine($"[red]Could not remove listing:[/] {EscapeMarkup(ex.Message)}");
         }
     }
 
@@ -375,83 +403,130 @@ public class ConsoleMenu
         {
             var transaction = _transactionService.PurchaseListing(listing, _currentUser!);
 
-            Console.WriteLine();
-            Console.WriteLine("Purchase completed successfully.");
-            Console.WriteLine($"Item: {transaction.Listing.Title}");
-            Console.WriteLine($"Buyer: {transaction.Buyer.Username}");
-            Console.WriteLine($"Seller: {transaction.Seller.Username}");
-            Console.WriteLine($"Price: {transaction.Price} NOK");
-            Console.WriteLine($"Date: {transaction.TransactionDate:g}");
+            AnsiConsole.MarkupLine("[green]Purchase completed successfully.[/]");
+            AnsiConsole.WriteLine();
+
+            var panel = new Panel(
+                $"[yellow]Item:[/] {EscapeMarkup(transaction.Listing.Title)}\n" +
+                $"[yellow]Buyer:[/] {EscapeMarkup(transaction.Buyer.Username)}\n" +
+                $"[yellow]Seller:[/] {EscapeMarkup(transaction.Seller.Username)}\n" +
+                $"[yellow]Price:[/] {transaction.Price} NOK\n" +
+                $"[yellow]Date:[/] {transaction.TransactionDate:g}")
+            {
+                Header = new PanelHeader("Purchase Summary"),
+                Border = BoxBorder.Rounded
+            };
+
+            AnsiConsole.Write(panel);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Purchase failed: {ex.Message}");
+            AnsiConsole.MarkupLine($"[red]Purchase failed:[/] {EscapeMarkup(ex.Message)}");
         }
     }
 
     private void ShowMyProfile()
     {
-        Console.WriteLine("=== My Profile ===");
-        Console.WriteLine($"Username: {_currentUser!.Username}");
-        Console.WriteLine($"Listings: {_currentUser.Listings.Count}");
-        Console.WriteLine($"Purchases: {_currentUser.Purchases.Count}");
-        Console.WriteLine($"Sales: {_currentUser.Sales.Count}");
-        Console.WriteLine($"Average Rating: {_currentUser.AverageRating:F1}");
+        var reviews = _reviewService.GetReviewsForUser(_currentUser!);
 
-        var reviews = _reviewService.GetReviewsForUser(_currentUser);
+        var profilePanel = new Panel(
+            $"[yellow]Username:[/] {EscapeMarkup(_currentUser.Username)}\n" +
+            $"[yellow]Listings:[/] {_currentUser.Listings.Count}\n" +
+            $"[yellow]Purchases:[/] {_currentUser.Purchases.Count}\n" +
+            $"[yellow]Sales:[/] {_currentUser.Sales.Count}\n" +
+            $"[yellow]Average Rating:[/] {_currentUser.AverageRating:F1}")
+        {
+            Header = new PanelHeader("My Profile"),
+            Border = BoxBorder.Rounded
+        };
+
+        AnsiConsole.Write(profilePanel);
 
         if (!reviews.Any())
         {
-            Console.WriteLine("No reviews received yet.");
+            AnsiConsole.MarkupLine("[yellow]No reviews received yet.[/]");
             return;
         }
 
-        Console.WriteLine();
-        Console.WriteLine("Reviews received:");
+        var table = new Table().Border(TableBorder.Rounded);
+        table.AddColumn("[bold]#[/]");
+        table.AddColumn("[bold]Rating[/]");
+        table.AddColumn("[bold]Reviewer[/]");
+        table.AddColumn("[bold]Comment[/]");
+
         for (int i = 0; i < reviews.Count; i++)
         {
             var review = reviews[i];
-            Console.WriteLine($"{i + 1}. Rating: {review.Rating} | Reviewer: {review.Reviewer.Username}");
-
-            if (!string.IsNullOrWhiteSpace(review.Comment))
-            {
-                Console.WriteLine($"   Comment: {review.Comment}");
-            }
+            table.AddRow(
+                (i + 1).ToString(),
+                review.Rating.ToString(),
+                EscapeMarkup(review.Reviewer.Username),
+                EscapeMarkup(string.IsNullOrWhiteSpace(review.Comment) ? "-" : review.Comment));
         }
+
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(new Rule("[green]Reviews Received[/]"));
+        AnsiConsole.Write(table);
     }
 
     private void ShowMyPurchases()
     {
         if (!_currentUser!.Purchases.Any())
         {
-            Console.WriteLine("You have not purchased any items.");
+            AnsiConsole.MarkupLine("[yellow]You have not purchased any items.[/]");
             return;
         }
 
-        Console.WriteLine("=== My Purchases ===");
+        var table = new Table().Border(TableBorder.Rounded);
+        table.AddColumn("[bold]#[/]");
+        table.AddColumn("[bold]Item[/]");
+        table.AddColumn("[bold]Seller[/]");
+        table.AddColumn("[bold]Price[/]");
+        table.AddColumn("[bold]Date[/]");
+
         for (int i = 0; i < _currentUser.Purchases.Count; i++)
         {
             var purchase = _currentUser.Purchases[i];
-            Console.WriteLine(
-                $"{i + 1}. {purchase.Listing.Title} | Seller: {purchase.Seller.Username} | Price: {purchase.Price} NOK | Date: {purchase.TransactionDate:g}");
+            table.AddRow(
+                (i + 1).ToString(),
+                EscapeMarkup(purchase.Listing.Title),
+                EscapeMarkup(purchase.Seller.Username),
+                $"{purchase.Price} NOK",
+                purchase.TransactionDate.ToString("g"));
         }
+
+        AnsiConsole.Write(new Rule("[green]My Purchases[/]"));
+        AnsiConsole.Write(table);
     }
 
     private void ShowMySales()
     {
         if (!_currentUser!.Sales.Any())
         {
-            Console.WriteLine("You have not sold any items.");
+            AnsiConsole.MarkupLine("[yellow]You have not sold any items.[/]");
             return;
         }
 
-        Console.WriteLine("=== My Sales ===");
+        var table = new Table().Border(TableBorder.Rounded);
+        table.AddColumn("[bold]#[/]");
+        table.AddColumn("[bold]Item[/]");
+        table.AddColumn("[bold]Buyer[/]");
+        table.AddColumn("[bold]Price[/]");
+        table.AddColumn("[bold]Date[/]");
+
         for (int i = 0; i < _currentUser.Sales.Count; i++)
         {
             var sale = _currentUser.Sales[i];
-            Console.WriteLine(
-                $"{i + 1}. {sale.Listing.Title} | Buyer: {sale.Buyer.Username} | Price: {sale.Price} NOK | Date: {sale.TransactionDate:g}");
+            table.AddRow(
+                (i + 1).ToString(),
+                EscapeMarkup(sale.Listing.Title),
+                EscapeMarkup(sale.Buyer.Username),
+                $"{sale.Price} NOK",
+                sale.TransactionDate.ToString("g"));
         }
+
+        AnsiConsole.Write(new Rule("[green]My Sales[/]"));
+        AnsiConsole.Write(table);
     }
 
     private void LeaveReviewAsCurrentUser()
@@ -460,29 +535,33 @@ public class ConsoleMenu
 
         if (!myPurchases.Any())
         {
-            Console.WriteLine("You have no purchases to review.");
+            AnsiConsole.MarkupLine("[yellow]You have no purchases to review.[/]");
             return;
         }
 
-        var transaction = MenuInputHelper.SelectFromList(
-            myPurchases,
-            "Select a purchase to review:",
-            t => $"{t.Listing.Title} | Seller: {t.Seller.Username} | {t.Price} NOK");
+        AnsiConsole.Write(new Rule("[green]Select Purchase to Review[/]"));
+
+        var transaction = AnsiConsole.Prompt(
+            new SelectionPrompt<Transaction>()
+                .Title("Choose a purchase:")
+                .PageSize(10)
+                .UseConverter(t =>
+                    $"{t.Listing.Title} | Seller: {t.Seller.Username} | {t.Price} NOK | {t.TransactionDate:g}")
+                .AddChoices(myPurchases));
 
         int rating = MenuInputHelper.ReadChoice("Enter rating (1-6): ", 1, 6);
-        Console.Write("Enter comment (optional): ");
-        string comment = Console.ReadLine() ?? string.Empty;
+        string comment = AnsiConsole.Ask<string>("Enter comment (optional):");
 
         try
         {
-            // The buyer is the only user allowed to review a transaction.
             var review = _reviewService.AddReview(rating, comment, _currentUser, transaction);
-            Console.WriteLine("Review added successfully.");
-            Console.WriteLine($"Seller: {review.ReviewedUser.Username} | Rating: {review.Rating}");
+            AnsiConsole.MarkupLine("[green]Review added successfully.[/]");
+            AnsiConsole.MarkupLine(
+                $"Seller: {EscapeMarkup(review.ReviewedUser.Username)} | Rating: {review.Rating}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Could not add review: {ex.Message}");
+            AnsiConsole.MarkupLine($"[red]Could not add review:[/] {EscapeMarkup(ex.Message)}");
         }
     }
 
@@ -492,22 +571,32 @@ public class ConsoleMenu
 
         if (!reviews.Any())
         {
-            Console.WriteLine("No reviews found.");
+            AnsiConsole.MarkupLine("[yellow]No reviews found.[/]");
             return;
         }
 
-        Console.WriteLine("=== Reviews ===");
+        var table = new Table().Border(TableBorder.Rounded);
+        table.AddColumn("[bold]#[/]");
+        table.AddColumn("[bold]Rating[/]");
+        table.AddColumn("[bold]Reviewer[/]");
+        table.AddColumn("[bold]Reviewed User[/]");
+        table.AddColumn("[bold]Item[/]");
+        table.AddColumn("[bold]Comment[/]");
+
         for (int i = 0; i < reviews.Count; i++)
         {
             var review = reviews[i];
-            Console.WriteLine(
-                $"{i + 1}. Rating: {review.Rating} | Reviewer: {review.Reviewer.Username} | Reviewed User: {review.ReviewedUser.Username} | Item: {review.Transaction.Listing.Title}");
-
-            if (!string.IsNullOrWhiteSpace(review.Comment))
-            {
-                Console.WriteLine($"   Comment: {review.Comment}");
-            }
+            table.AddRow(
+                (i + 1).ToString(),
+                review.Rating.ToString(),
+                EscapeMarkup(review.Reviewer.Username),
+                EscapeMarkup(review.ReviewedUser.Username),
+                EscapeMarkup(review.Transaction.Listing.Title),
+                EscapeMarkup(string.IsNullOrWhiteSpace(review.Comment) ? "-" : review.Comment));
         }
+
+        AnsiConsole.Write(new Rule("[green]Reviews[/]"));
+        AnsiConsole.Write(table);
     }
 
     private void SeedData()
@@ -530,5 +619,10 @@ public class ConsoleMenu
             ItemCondition.Fair,
             800,
             abdulla);
+    }
+
+    private static string EscapeMarkup(string text)
+    {
+        return Markup.Escape(text);
     }
 }

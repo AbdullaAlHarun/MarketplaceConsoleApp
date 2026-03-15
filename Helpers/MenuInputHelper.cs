@@ -1,4 +1,4 @@
-namespace MarketplaceConsoleApp.UI;
+namespace MarketplaceConsoleApp.Helpers;
 
 public static class MenuInputHelper
 {
